@@ -1,7 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
-import pool from './database.js';
+import pg from 'pg';
 
 dotenv.config();
 
@@ -13,6 +13,14 @@ console.log("EMAIL_PASS:", process.env.EMAIL_PASSWORD ? "✅ OK" : "❌ NINCS ME
 const app = express();
 const port = process.env.PORT || 3000;
 
+// **PostgreSQL kapcsolat Renderhez**
+const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Render esetén SSL szükséges
+    }
+});
+
 // Middleware beállítások
 app.set('view engine', 'ejs');
 app.set('views', './views');
@@ -22,9 +30,6 @@ app.use(express.static('public'));
 
 // **Szerver indítása**
 console.log("✅ Szerver indítása...");
-console.log("🔍 Ellenőrzött ENV változók:");
-console.log(" - EMAIL_USER:", process.env.EMAIL_USER ? "OK" : "❌ HIÁNYZIK!");
-console.log(" - DATABASE_URL:", process.env.DATABASE_URL ? "OK" : "❌ HIÁNYZIK!");
 
 // **PostgreSQL kapcsolat ellenőrzése**
 (async () => {
@@ -37,15 +42,9 @@ console.log(" - DATABASE_URL:", process.env.DATABASE_URL ? "OK" : "❌ HIÁNYZIK
     }
 })();
 
-// **Főoldal betöltése**
-app.get('/', async (req, res) => {
-    try {
-        console.log('✅ Főoldal betöltése...');
-        res.render('index', { successMessage: null, errorMessage: null });
-    } catch (error) {
-        console.error('❌ Hiba az index oldal betöltésekor:', error);
-        res.status(500).send('Szerverhiba');
-    }
+// **Adatbeküldő űrlap útvonal (iframe-hez)**
+app.get('/form', (req, res) => {
+    res.render('form'); // Ha az űrlap egy külön `form.ejs` fájlban van
 });
 
 // **POST - Űrlap beküldése**
@@ -104,18 +103,6 @@ app.get('/thankyou', (req, res) => {
     }
 });
 
-// **📌 Teszt útvonal az e-mail küldéshez**
-app.get('/test-email', async (req, res) => {
-    try {
-        console.log("📨 Teszt email küldése...");
-        await sendEmail("teszt@pelda.com", "Teszt tárgy", "Ez egy teszt email.");
-        res.send("✅ Email sikeresen elküldve!");
-    } catch (error) {
-        res.status(500).send("❌ Hiba az email küldés során: " + error.message);
-    }
-});
-
-/* eslint-disable no-unused-vars */  // **IDE figyelmeztetés kikapcsolása**
 // **E-mail küldés**
 async function sendEmail(to, subject, text) {
     try {
@@ -179,6 +166,7 @@ app.listen(port, () => {
     console.log(`🚀 Szerver fut: http://localhost:${port}`);
 });
 
+// **Keep-Alive a Render miatt**
 app.get('/keep-alive', (req, res) => {
     console.log('🔄 Keep-Alive hívás érkezett.');
     res.send('Server is running');

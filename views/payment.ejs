@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css">
+    <title>Fizetés</title>
+</head>
+<body>
+<div class="container">
+    <h1>Fizetés</h1>
+    <p>Kérjük, végezze el az utazásához szükséges fizetést. Az összeg: <strong><%= amount %> Ft</strong></p>
+
+    <!-- Stripe fizetés -->
+    <form id="stripe-payment-form" style="margin-bottom: 20px;">
+        <button type="submit" class="submit-button">Fizetés Stripe-on keresztül</button>
+    </form>
+
+    <!-- PayPal fizetés -->
+    <div id="paypal-button-container" style="margin-bottom: 20px;"></div>
+
+    <a href="/" class="submit-button" style="text-align: center;">Vissza a főoldalra</a>
+</div>
+
+<!-- Stripe JavaScript -->
+<script src="https://js.stripe.com/v3/"></script>
+<!-- PayPal JavaScript -->
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
+
+<script>
+    const stripe = Stripe('YOUR_STRIPE_PUBLISHABLE_KEY');
+
+    document.getElementById('stripe-payment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const response = await fetch('/stripe-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: 5000 })
+        });
+        const { clientSecret } = await response.json();
+        const { error } = await stripe.confirmCardPayment(clientSecret);
+        if (error) {
+            alert('Stripe fizetési hiba: ' + error.message);
+        } else {
+            alert('Stripe fizetés sikeres!');
+            window.location.href = '/thankyou';
+        }
+    });
+
+    paypal.Buttons({
+        createOrder: function () {
+            return fetch('/paypal-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(res => res.json())
+                .then(data => data.id);
+        },
+        onApprove: function (data) {
+            return fetch('/paypal-capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderID: data.orderID })
+            })
+                .then(() => {
+                    alert('PayPal fizetés sikeres!');
+                    window.location.href = '/thankyou';
+                });
+        },
+        onError: function (err) {
+            console.error('PayPal hiba:', err);
+            alert('Hiba történt a PayPal fizetés során.');
+        }
+    }).render('#paypal-button-container');
+</script>
+</body>
+</html>

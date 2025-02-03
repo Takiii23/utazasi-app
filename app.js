@@ -8,14 +8,7 @@ dotenv.config();
 
 // ✅ Express alkalmazás inicializálása
 const app = express();
-const port = process.env.PORT || 3000;
-
-// ✅ Biztonsági beállítások az iframe támogatásához
-app.use((req, res, next) => {
-    res.setHeader("X-Frame-Options", "ALLOWALL");
-    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
-    next();
-});
+const port = process.env.PORT || 3000; // ⚠️ KÖTELEZŐ a process.env.PORT használata Renderen!
 
 // ✅ Middleware beállítások
 app.set('view engine', 'ejs');
@@ -24,15 +17,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// ✅ PostgreSQL kapcsolat Renderhez
-const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
+// ✅ Iframe támogatás systeme.io és más külső oldalakhoz
+app.use((req, res, next) => {
+    res.setHeader("X-Frame-Options", "ALLOWALL");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
+    next();
 });
 
-// ✅ Alapértelmezett route (főoldal)
+// ✅ PostgreSQL kapcsolat
+const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
+
+// ✅ Főoldal
 app.get("/", (req, res) => {
     res.render("index");
 });
@@ -145,12 +143,18 @@ async function sendAdminEmail(destination, peopleCount, childrenAge, departureDa
     await sendEmail(process.env.EMAIL_USER, "Új ajánlatkérés érkezett!", text);
 }
 
+// ✅ Keep-Alive a Render miatt
+app.get('/keep-alive', (req, res) => {
+    console.log('🔄 Keep-Alive hívás érkezett.');
+    res.status(200).send('Server is running');
+});
+
 // ✅ Szerver indítása
 app.listen(port, () => {
     console.log(`🚀 Szerver fut: http://localhost:${port}`);
 });
 
-// ✅ Keep-Alive a Render miatt
+// ✅ Keep-Alive ping, hogy a Render ne állítsa le az alkalmazást
 setInterval(() => {
     console.log('🔄 Keep-Alive ping...');
 }, 30000);

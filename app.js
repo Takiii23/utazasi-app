@@ -8,7 +8,14 @@ dotenv.config();
 
 // ✅ Express alkalmazás inicializálása
 const app = express();
-const port = process.env.PORT || 3000; // ⚠️ KÖTELEZŐ a process.env.PORT használata Renderen!
+const port = process.env.PORT || 3000;
+
+// ✅ Iframe támogatás systeme.io-hoz
+app.use((req, res, next) => {
+    res.setHeader("X-Frame-Options", "ALLOWALL");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
+    next();
+});
 
 // ✅ Middleware beállítások
 app.set('view engine', 'ejs');
@@ -17,28 +24,27 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// ✅ Iframe támogatás systeme.io és más külső oldalakhoz
-app.use((req, res, next) => {
-    res.setHeader("X-Frame-Options", "ALLOWALL");
-    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
-    next();
-});
-
-// ✅ PostgreSQL kapcsolat
+// ✅ PostgreSQL kapcsolat Renderhez
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
-// ✅ Főoldal
+// ✅ Alapértelmezett route (főoldal)
 app.get("/", (req, res) => {
     res.render("index");
 });
 
-// ✅ Iframe-kompatibilis form route
-app.get('/form', (req, res) => {
-    res.render('form');
-});
+// ✅ PostgreSQL kapcsolat tesztelése
+(async () => {
+    try {
+        const res = await pool.query('SELECT NOW()');
+        console.log('✅ PostgreSQL kapcsolat aktív:', res.rows[0].now);
+    } catch (error) {
+        console.error('❌ PostgreSQL kapcsolat sikertelen:', error);
+        process.exit(1);
+    }
+})();
 
 // ✅ AJAX-alapú űrlap beküldés
 app.post('/submit-form', async (req, res) => {
@@ -48,7 +54,7 @@ app.post('/submit-form', async (req, res) => {
         let {
             destination, peopleCount, childrenAge, departureDate, returnDate,
             duration, travelMethod, accommodationType, mealPlan, extraNeeds,
-            budget, contactName, contactEmail, contactPhone,
+            budget, contactName, contactEmail, contactPhone
         } = req.body;
 
         if (!destination || !peopleCount || !departureDate || !returnDate || !budget || !contactEmail) {
@@ -67,7 +73,7 @@ app.post('/submit-form', async (req, res) => {
         await pool.query(query, [
             destination, peopleCount, childrenAge, departureDate, returnDate,
             duration, travelMethod, accommodationType, mealPlan, extraNeeds,
-            budget, contactName, contactEmail, contactPhone,
+            budget, contactName, contactEmail, contactPhone
         ]);
 
         console.log('✅ Adatok sikeresen mentve az adatbázisba.');
@@ -83,7 +89,7 @@ app.post('/submit-form', async (req, res) => {
     }
 });
 
-// ✅ "Köszönjük" oldal AJAX-al
+// ✅ "Köszönjük" oldal AJAX-szal
 app.get('/thankyou', (req, res) => {
     res.render('thankyou');
 });
@@ -97,15 +103,15 @@ async function sendEmail(to, subject, text) {
             secure: false,
             auth: {
                 user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            },
+                pass: process.env.EMAIL_PASSWORD
+            }
         });
 
         await transporter.sendMail({
             from: `"Utazók Kézikönyve" <${process.env.EMAIL_USER}>`,
             to,
             subject,
-            text,
+            text
         });
 
         console.log(`✅ Email elküldve: ${subject}`);
@@ -136,6 +142,11 @@ async function sendAdminEmail(destination, peopleCount, childrenAge, departureDa
 - Utazók száma: ${peopleCount}
 - Gyermekek életkora: ${childrenAge}
 - Időszak: ${departureDate} - ${returnDate}
+- Időtartam: ${duration} nap
+- Utazás módja: ${travelMethod}
+- Szállás típusa: ${accommodationType}
+- Ellátás típusa: ${mealPlan}
+- Extra igények: ${extraNeeds}
 - Kapcsolattartó neve: ${contactName}
 - E-mail: ${contactEmail}
 - Telefonszám: ${contactPhone}`;
@@ -143,18 +154,17 @@ async function sendAdminEmail(destination, peopleCount, childrenAge, departureDa
     await sendEmail(process.env.EMAIL_USER, "Új ajánlatkérés érkezett!", text);
 }
 
-// ✅ Keep-Alive a Render miatt
-app.get('/keep-alive', (req, res) => {
-    console.log('🔄 Keep-Alive hívás érkezett.');
-    res.status(200).send('Server is running');
-});
-
 // ✅ Szerver indítása
 app.listen(port, () => {
     console.log(`🚀 Szerver fut: http://localhost:${port}`);
 });
 
-// ✅ Keep-Alive ping, hogy a Render ne állítsa le az alkalmazást
+// ✅ Keep-Alive a Render miatt
+app.get('/keep-alive', (req, res) => {
+    console.log('🔄 Keep-Alive hívás érkezett.');
+    res.send('Server is running');
+});
+
 setInterval(() => {
     console.log('🔄 Keep-Alive ping...');
 }, 30000);

@@ -10,9 +10,8 @@
 <div class="container">
     <h1>Személyre szabott utazás ajánlatkérő</h1>
 
-    <!-- ✅ AJAX-kompatibilis űrlap -->
-    <form id="travelForm">
-
+    <!-- ✅ AJAX NÉLKÜLI FORM -->
+    <form action="/submit-form" method="POST">
         <div class="form-group">
             <label for="destination">Hova szeretnétek utazni?</label>
             <input type="text" id="destination" name="destination" placeholder="Adja meg az úti célt" required>
@@ -95,30 +94,7 @@
 
         <button type="submit" class="submit-button">Ajánlatkérés küldése</button>
     </form>
-
 </div>
-
-<script>
-    document.getElementById("travelForm").addEventListener("submit", function(event) {
-        event.preventDefault(); // ✅ Megakadályozza az oldal frissítését
-
-        let formData = new FormData(this);
-
-        fetch("/submit-form", {
-            method: "POST",
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = "/thankyou"; // ✅ Továbbirányítás a "thankyou" oldalra
-                } else {
-                    alert("❌ Hiba történt! Kérjük, próbálja újra.");
-                }
-            })
-            .catch(error => console.error("Hiba:", error));
-    });
-</script>
 
 </body>
 </html>

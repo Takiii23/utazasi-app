@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import pg from 'pg';
 
-// ✅ Betöltjük a környezeti változókat
+// ✅ Környezeti változók betöltése
 dotenv.config();
 
 // ✅ Express alkalmazás inicializálása
@@ -46,7 +46,7 @@ app.get("/", (req, res) => {
     }
 })();
 
-// ✅ AJAX-alapú űrlap beküldés
+// ✅ POST – Űrlap beküldése és adatbázis mentés (klasszikus oldalbetöltéssel)
 app.post('/submit-form', async (req, res) => {
     try {
         console.log('📥 Beérkezett űrlap:', req.body);
@@ -58,11 +58,13 @@ app.post('/submit-form', async (req, res) => {
         } = req.body;
 
         if (!destination || !peopleCount || !departureDate || !returnDate || !budget || !contactEmail) {
-            return res.status(400).json({ success: false, error: "🚨 Hiányzó kötelező mezők!" });
+            throw new Error("🚨 Hiányzó kötelező mezők!");
         }
 
+        // Költség mező normalizálás
         budget = budget.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
+        // Adatok mentése az adatbázisba
         const query = `
             INSERT INTO requests (
                 destination, peopleCount, childrenAge, departureDate, returnDate, 
@@ -82,14 +84,16 @@ app.post('/submit-form', async (req, res) => {
         await sendUserEmail(contactName, contactEmail, destination, peopleCount, budget, departureDate, returnDate);
         await sendAdminEmail(destination, peopleCount, childrenAge, departureDate, returnDate, duration, travelMethod, accommodationType, mealPlan, extraNeeds, budget, contactName, contactEmail, contactPhone);
 
-        res.json({ success: true }); // ✅ AJAX válasz
+        // 🔄 **Átirányítás a "Köszönjük" oldalra**
+        res.redirect('/thankyou');
+
     } catch (error) {
         console.error('❌ Hiba az űrlap feldolgozása során:', error);
-        res.status(500).json({ success: false });
+        res.status(500).send('Szerverhiba');
     }
 });
 
-// ✅ "Köszönjük" oldal AJAX-szal
+// ✅ "Köszönjük" oldal
 app.get('/thankyou', (req, res) => {
     res.render('thankyou');
 });

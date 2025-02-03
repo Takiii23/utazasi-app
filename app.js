@@ -54,8 +54,10 @@ app.get("/", (req, res) => {
 })();
 
 // ✅ Iframe-kompatibilis form route
-app.get('/form', (req, res) => {
-    res.render('form'); // `form.ejs` fájl szükséges a `views` mappában
+app.use((req, res, next) => {
+    res.setHeader("X-Frame-Options", "ALLOWALL");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
+    next();
 });
 
 // ✅ POST - Űrlap beküldése és adatbázis mentés

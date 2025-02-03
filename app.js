@@ -61,10 +61,10 @@ app.post('/submit-form', async (req, res) => {
             throw new Error("🚨 Hiányzó kötelező mezők!");
         }
 
-        // Költség mező normalizálás
-        budget = budget.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        // 🔹 Költség mező normalizálás (távolítja el a pontokat az adatbázisba írás előtt)
+        budget = budget.replace(/\./g, "");
 
-        // Adatok mentése az adatbázisba
+        // 🔹 Adatok mentése az adatbázisba
         const query = `
             INSERT INTO requests (
                 destination, peopleCount, childrenAge, departureDate, returnDate, 

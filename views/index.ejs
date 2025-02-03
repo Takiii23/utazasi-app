@@ -10,7 +10,7 @@
 <div class="container">
     <h1>Személyre szabott utazás ajánlatkérő</h1>
 
-    <!-- ✅ Itt az AJAX-kompatibilis form -->
+    <!-- ✅ AJAX-kompatibilis űrlap -->
     <form id="travelForm">
 
         <div class="form-group">
@@ -74,11 +74,6 @@
         </div>
 
         <div class="form-group">
-            <label for="budget">Az utazás teljes költségkerete:</label>
-            <input type="text" id="budget" name="budget" placeholder="Adja meg az összeget" required>
-        </div>
-
-        <div class="form-group">
             <label for="contactName">Kapcsolattartó neve:</label>
             <input type="text" id="contactName" name="contactName" placeholder="Adja meg a nevét" required>
         </div>
@@ -101,11 +96,6 @@
         <button type="submit" class="submit-button">Ajánlatkérés küldése</button>
     </form>
 
-    <!-- ✅ AJAX válasz helye -->
-    <div id="thankyouMessage" style="display:none; text-align: center; font-size: 18px;">
-        <h2>Köszönjük az ajánlatkérést!</h2>
-        <p>Hamarosan felvesszük Önnel a kapcsolatot.</p>
-    </div>
 </div>
 
 <script>
@@ -121,30 +111,12 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    document.getElementById("travelForm").style.display = "none";
-                    document.getElementById("thankyouMessage").style.display = "block";
+                    window.location.href = "/thankyou"; // ✅ Továbbirányítás a "thankyou" oldalra
                 } else {
                     alert("❌ Hiba történt! Kérjük, próbálja újra.");
                 }
             })
             .catch(error => console.error("Hiba:", error));
-    });
-
-    // ✅ Költség mező formázás
-    document.addEventListener("DOMContentLoaded", function () {
-        const budgetInput = document.getElementById("budget");
-
-        budgetInput.addEventListener("input", function () {
-            let value = this.value.replace(/\D/g, ""); // Csak számokat engedélyez
-            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Ezeres elválasztó pontok
-            this.value = value;
-        });
-
-        budgetInput.addEventListener("blur", function () {
-            if (this.value === "") {
-                this.value = "0";
-            }
-        });
     });
 </script>
 

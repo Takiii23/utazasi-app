@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/style.css">
     <title>Személyre szabott utazási ajánlatkérő</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="container">
     <h1>Személyre szabott utazás ajánlatkérő</h1>
-    <form action="/submit-form" method="POST">
+    <form id="travelForm">
 
         <div class="form-group">
             <label for="destination">Hova szeretnétek utazni?</label>
@@ -18,102 +18,51 @@
 
         <div class="form-group">
             <label for="peopleCount">Hányan szeretnétek utazni?</label>
-            <input type="number" id="peopleCount" name="peopleCount" min="1" placeholder="Adja meg az utazók számát" required>
-        </div>
-
-        <div class="form-group">
-            <label for="childrenAge">Gyermekek életkora (az utazás ideje alatt):</label>
-            <input type="text" id="childrenAge" name="childrenAge" placeholder="Pl. 5, 8, 12 éves">
-        </div>
-
-        <div class="form-group">
-            <label for="departureDate">Legkorábbi indulás dátuma:</label>
-            <input type="date" id="departureDate" name="departureDate" required>
-        </div>
-
-        <div class="form-group">
-            <label for="returnDate">Legkésőbbi hazaérkezés dátuma:</label>
-            <input type="date" id="returnDate" name="returnDate" required>
-        </div>
-
-        <div class="form-group">
-            <label for="duration">Nyaralás hossza (napok száma):</label>
-            <input type="number" id="duration" name="duration" min="1" placeholder="Adja meg a napok számát" required>
-        </div>
-
-        <div class="form-group">
-            <label for="travelMethod">Hogyan? (pl. saját autó, repülő):</label>
-            <input type="text" id="travelMethod" name="travelMethod" placeholder="Adja meg az utazás módját" required>
-        </div>
-
-        <div class="form-group">
-            <label for="accommodationType">Szállás típusa:</label>
-            <select id="accommodationType" name="accommodationType" required>
-                <option value="apartman">Apartman</option>
-                <option value="hotel3">Hotel 3*</option>
-                <option value="hotel4">Hotel 4*</option>
-                <option value="hotel5">Hotel 5*</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="mealPlan">Ellátás:</label>
-            <select id="mealPlan" name="mealPlan" required>
-                <option value="nincs">Ellátás nélkül</option>
-                <option value="reggeli">Reggeli</option>
-                <option value="felpanzi">Félpanzió</option>
-                <option value="allinclusive">All inclusive</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="extraNeeds">Extra igények (pl. belvárosban, tengerparton, panorámás szoba):</label>
-            <input type="text" id="extraNeeds" name="extraNeeds" placeholder="Írja ide az igényeket">
-        </div>
-
-        <div class="form-group">
-            <label for="budget">Az utazás teljes költségkerete:</label>
-            <input type="text" id="budget" name="budget" placeholder="Adja meg az összeget" required>
-        </div>
-
-        <div class="form-group">
-            <label for="contactName">Kapcsolattartó neve:</label>
-            <input type="text" id="contactName" name="contactName" placeholder="Adja meg a nevét" required>
+            <input type="number" id="peopleCount" name="peopleCount" min="1" required>
         </div>
 
         <div class="form-group">
             <label for="contactEmail">Kapcsolattartó email címe:</label>
-            <input type="email" id="contactEmail" name="contactEmail" placeholder="Adja meg az email címét" required>
-        </div>
-
-        <div class="form-group">
-            <label for="contactPhone">Kapcsolattartó telefonszáma:</label>
-            <input type="tel" id="contactPhone" name="contactPhone" placeholder="Adja meg a telefonszámát" required>
-        </div>
-
-        <div class="form-group checkbox-group">
-            <input type="checkbox" id="gdpr" name="gdpr" required>
-            <label for="gdpr">Elfogadom az adatkezelési tájékoztatót.</label>
+            <input type="email" id="contactEmail" name="contactEmail" required>
         </div>
 
         <button type="submit" class="submit-button">Ajánlatkérés küldése</button>
     </form>
+
+    <iframe id="thankYouFrame" style="display: none; width: 100%; height: 300px; border: none;"></iframe>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const budgetInput = document.getElementById("budget");
+        const form = document.getElementById("travelForm");
+        const thankYouFrame = document.getElementById("thankYouFrame");
 
-        budgetInput.addEventListener("input", function () {
-            let value = this.value.replace(/\D/g, ""); // Csak számokat engedélyez
-            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Ezeres elválasztó pontok
-            this.value = value;
-        });
+        form.addEventListener("submit", function (event) {
+            event.preventDefault();
 
-        budgetInput.addEventListener("blur", function () {
-            if (this.value === "") {
-                this.value = "0";
-            }
+            const formData = new FormData(form);
+
+            fetch("/submit-form", {
+                method: "POST",
+                body: JSON.stringify(Object.fromEntries(formData)),
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        form.style.display = "none"; // Az űrlap eltűnik
+                        thankYouFrame.src = "/thankyou"; // Betöltjük a Thank You oldalt
+                        thankYouFrame.style.display = "block";
+                    } else {
+                        alert("Hiba történt az űrlap beküldésekor!");
+                    }
+                })
+                .catch(error => {
+                    console.error("Hiba történt:", error);
+                    alert("Hiba történt az űrlap beküldésekor!");
+                });
         });
     });
 </script>

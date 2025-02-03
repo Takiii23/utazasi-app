@@ -13,6 +13,7 @@ const port = process.env.PORT || 3000;
 // ✅ Biztonsági beállítások az iframe támogatásához
 app.use((req, res, next) => {
     res.setHeader("X-Frame-Options", "ALLOWALL");
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
     next();
 });
 
@@ -23,44 +24,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// ✅ ENV változók ellenőrzése
-console.log("📌 ENV változók ellenőrzése:");
-console.log("DATABASE_URL:", process.env.DATABASE_URL ? "✅ OK" : "❌ NINCS MEGADVA");
-console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ OK" : "❌ NINCS MEGADVA");
-console.log("EMAIL_PASS:", process.env.EMAIL_PASSWORD ? "✅ OK" : "❌ NINCS MEGADVA");
-
 // ✅ PostgreSQL kapcsolat Renderhez
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
-        rejectUnauthorized: false // Render esetén szükséges SSL
+        rejectUnauthorized: false
     }
 });
 
 // ✅ Alapértelmezett route (főoldal)
 app.get("/", (req, res) => {
-    res.render("index");  // Az `index.ejs` fájlt fogja betölteni a `views` mappából
+    res.render("index");
 });
-
-// ✅ PostgreSQL kapcsolat tesztelése
-(async () => {
-    try {
-        const res = await pool.query('SELECT NOW()');
-        console.log('✅ PostgreSQL kapcsolat aktív:', res.rows[0].now);
-    } catch (error) {
-        console.error('❌ PostgreSQL kapcsolat sikertelen:', error);
-        process.exit(1);
-    }
-})();
 
 // ✅ Iframe-kompatibilis form route
-app.use((req, res, next) => {
-    res.setHeader("X-Frame-Options", "ALLOWALL");
-    res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://systeme.io https://*.systeme.io");
-    next();
+app.get('/form', (req, res) => {
+    res.render('form');
 });
 
-// ✅ POST - Űrlap beküldése és adatbázis mentés
+// ✅ AJAX-alapú űrlap beküldés
 app.post('/submit-form', async (req, res) => {
     try {
         console.log('📥 Beérkezett űrlap:', req.body);
@@ -72,7 +54,7 @@ app.post('/submit-form', async (req, res) => {
         } = req.body;
 
         if (!destination || !peopleCount || !departureDate || !returnDate || !budget || !contactEmail) {
-            throw new Error("🚨 Hiányzó kötelező mezők!");
+            return res.status(400).json({ success: false, error: "🚨 Hiányzó kötelező mezők!" });
         }
 
         budget = budget.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -92,28 +74,20 @@ app.post('/submit-form', async (req, res) => {
 
         console.log('✅ Adatok sikeresen mentve az adatbázisba.');
 
-        console.log('📨 Felhasználói e-mail küldése folyamatban...');
+        // ✅ E-mail küldés
         await sendUserEmail(contactName, contactEmail, destination, peopleCount, budget, departureDate, returnDate);
-
-        console.log('📨 Admin e-mail küldése folyamatban...');
         await sendAdminEmail(destination, peopleCount, childrenAge, departureDate, returnDate, duration, travelMethod, accommodationType, mealPlan, extraNeeds, budget, contactName, contactEmail, contactPhone);
 
-        res.redirect('/thankyou');
+        res.json({ success: true }); // ✅ AJAX válasz
     } catch (error) {
         console.error('❌ Hiba az űrlap feldolgozása során:', error);
-        res.status(500).send('Szerverhiba');
+        res.status(500).json({ success: false });
     }
 });
 
-// ✅ Köszönjük oldal
+// ✅ "Köszönjük" oldal AJAX-al
 app.get('/thankyou', (req, res) => {
-    try {
-        console.log('✅ Thank You oldal betöltése...');
-        res.render('thankyou');
-    } catch (error) {
-        console.error('❌ Hiba a thankyou oldal betöltésekor:', error);
-        res.status(500).send('Szerverhiba');
-    }
+    res.render('thankyou');
 });
 
 // ✅ E-mail küldés funkció
@@ -164,11 +138,6 @@ async function sendAdminEmail(destination, peopleCount, childrenAge, departureDa
 - Utazók száma: ${peopleCount}
 - Gyermekek életkora: ${childrenAge}
 - Időszak: ${departureDate} - ${returnDate}
-- Időtartam: ${duration} nap
-- Utazás módja: ${travelMethod}
-- Szállás típusa: ${accommodationType}
-- Ellátás típusa: ${mealPlan}
-- Extra igények: ${extraNeeds}
 - Kapcsolattartó neve: ${contactName}
 - E-mail: ${contactEmail}
 - Telefonszám: ${contactPhone}`;
@@ -182,11 +151,6 @@ app.listen(port, () => {
 });
 
 // ✅ Keep-Alive a Render miatt
-app.get('/keep-alive', (req, res) => {
-    console.log('🔄 Keep-Alive hívás érkezett.');
-    res.send('Server is running');
-});
-
 setInterval(() => {
     console.log('🔄 Keep-Alive ping...');
 }, 30000);

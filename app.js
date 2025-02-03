@@ -3,41 +3,46 @@ import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import pg from 'pg';
 
+// ✅ Betöltjük a környezeti változókat
 dotenv.config();
 
-console.log("📌 ENV változók ellenőrzése:");
-console.log("DATABASE_URL:", process.env.DATABASE_URL ? "✅ OK" : "❌ NINCS MEGADVA");
-console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ OK" : "❌ NINCS MEGADVA");
-console.log("EMAIL_PASS:", process.env.EMAIL_PASSWORD ? "✅ OK" : "❌ NINCS MEGADVA");
-
+// ✅ Express alkalmazás inicializálása
 const app = express();
 const port = process.env.PORT || 3000;
 
+// ✅ Biztonsági beállítások az iframe támogatásához
 app.use((req, res, next) => {
     res.setHeader("X-Frame-Options", "ALLOWALL");
     next();
 });
 
-
-// **PostgreSQL kapcsolat Renderhez**
-const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false // Render esetén SSL szükséges
-    }
-});
-
-// Middleware beállítások
+// ✅ Middleware beállítások
 app.set('view engine', 'ejs');
 app.set('views', './views');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// **Szerver indítása**
-console.log("✅ Szerver indítása...");
+// ✅ ENV változók ellenőrzése
+console.log("📌 ENV változók ellenőrzése:");
+console.log("DATABASE_URL:", process.env.DATABASE_URL ? "✅ OK" : "❌ NINCS MEGADVA");
+console.log("EMAIL_USER:", process.env.EMAIL_USER ? "✅ OK" : "❌ NINCS MEGADVA");
+console.log("EMAIL_PASS:", process.env.EMAIL_PASSWORD ? "✅ OK" : "❌ NINCS MEGADVA");
 
-// **PostgreSQL kapcsolat ellenőrzése**
+// ✅ PostgreSQL kapcsolat Renderhez
+const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false // Render esetén szükséges SSL
+    }
+});
+
+// ✅ Alapértelmezett route (főoldal)
+app.get("/", (req, res) => {
+    res.render("index");  // Az `index.ejs` fájlt fogja betölteni a `views` mappából
+});
+
+// ✅ PostgreSQL kapcsolat tesztelése
 (async () => {
     try {
         const res = await pool.query('SELECT NOW()');
@@ -48,12 +53,12 @@ console.log("✅ Szerver indítása...");
     }
 })();
 
-// **Adatbeküldő űrlap útvonal (iframe-hez)**
+// ✅ Iframe-kompatibilis form route
 app.get('/form', (req, res) => {
-    res.render('form'); // Ha az űrlap egy külön `form.ejs` fájlban van
+    res.render('form'); // `form.ejs` fájl szükséges a `views` mappában
 });
 
-// **POST - Űrlap beküldése**
+// ✅ POST - Űrlap beküldése és adatbázis mentés
 app.post('/submit-form', async (req, res) => {
     try {
         console.log('📥 Beérkezett űrlap:', req.body);
@@ -98,7 +103,7 @@ app.post('/submit-form', async (req, res) => {
     }
 });
 
-// **"Köszönjük" oldal**
+// ✅ Köszönjük oldal
 app.get('/thankyou', (req, res) => {
     try {
         console.log('✅ Thank You oldal betöltése...');
@@ -109,7 +114,7 @@ app.get('/thankyou', (req, res) => {
     }
 });
 
-// **E-mail küldés**
+// ✅ E-mail küldés funkció
 async function sendEmail(to, subject, text) {
     try {
         const transporter = nodemailer.createTransport({
@@ -135,6 +140,7 @@ async function sendEmail(to, subject, text) {
     }
 }
 
+// ✅ Felhasználói e-mail küldése
 async function sendUserEmail(name, email, destination, peopleCount, budget, departureDate, returnDate) {
     const text = `Kedves ${name}!\n\n
 Köszönjük, hogy az Utazók Kézikönyvét választotta!\n
@@ -149,6 +155,7 @@ Csapatunk hamarosan felveszi Önnel a kapcsolatot.\n
     await sendEmail(email, "Köszönjük az ajánlatkérést!", text);
 }
 
+// ✅ Admin e-mail küldése
 async function sendAdminEmail(destination, peopleCount, childrenAge, departureDate, returnDate, duration, travelMethod, accommodationType, mealPlan, extraNeeds, budget, contactName, contactEmail, contactPhone) {
     const text = `Új ajánlatkérés érkezett:\n
 - Úticél: ${destination}
@@ -167,12 +174,12 @@ async function sendAdminEmail(destination, peopleCount, childrenAge, departureDa
     await sendEmail(process.env.EMAIL_USER, "Új ajánlatkérés érkezett!", text);
 }
 
-// **Szerver indítása**
+// ✅ Szerver indítása
 app.listen(port, () => {
     console.log(`🚀 Szerver fut: http://localhost:${port}`);
 });
 
-// **Keep-Alive a Render miatt**
+// ✅ Keep-Alive a Render miatt
 app.get('/keep-alive', (req, res) => {
     console.log('🔄 Keep-Alive hívás érkezett.');
     res.send('Server is running');

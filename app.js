@@ -13,6 +13,12 @@ console.log("EMAIL_PASS:", process.env.EMAIL_PASSWORD ? "✅ OK" : "❌ NINCS ME
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use((req, res, next) => {
+    res.setHeader("X-Frame-Options", "ALLOWALL");
+    next();
+});
+
+
 // **PostgreSQL kapcsolat Renderhez**
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
